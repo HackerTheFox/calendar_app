@@ -1,14 +1,9 @@
 package com.example.calanderappsdev264
 
-import android.graphics.Paint.Align
-import android.inputmethodservice.Keyboard.Row
 import android.os.Bundle
-import android.util.Log
-import android.widget.Button
-import android.widget.ImageButton
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -21,64 +16,103 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import java.time.LocalDateTime
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import androidx.core.provider.FontsContractCompat.Columns
 import java.util.*
 import java.text.SimpleDateFormat
 import com.example.calanderappsdev264.ui.theme.CalanderAppSDEV264Theme
 import com.example.calanderappsdev264.ui.theme.Purple40
 import kotlinx.coroutines.delay
-import kotlin.math.log
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Menu
 import java.time.LocalDate
-import java.time.Month
-import java.time.format.DateTimeFormatter
-import java.time.temporal.WeekFields
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.node.ModifierNodeElement
+import com.example.calanderappsdev264.viewmodel.MainViewModel
 import com.example.calanderappsdev264.ui.theme.PurpleGrey40
 
-// 2024-11-14
+
 class MainActivity : ComponentActivity() {
+    // Accessing the ViewModel
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             CalanderAppSDEV264Theme {
-                val currentDay = DaysOfWeek[0]
-                val currentTime = "1"
-                val currentDate = "November"
-                val currentMonth = 11
-                Column {
-                    CurrentTimeScreen()
-                    Spacer(modifier = Modifier.height(20.dp))
-                    CalandarNav(currentDay, currentDate, currentTime, currentMonth)
+                val navController = rememberNavController()
+
+                // Observe currentScreen state from the ViewModel
+                val currentScreen = viewModel.currentScreen
+
+                // Set up the NavHost
+                NavHost(navController = navController, startDestination = "home") {
+                    composable("home") {
+                        Column {
+                            CurrentTimeScreen(viewModel, navController)
+                            Spacer(modifier = Modifier.height(30.dp))
+                            CalandarNav(
+                                currentMonth = 1,
+                                currentDay = "N",
+                                currentDate = "11",
+                                currentTime = "1",
+                                viewModel = viewModel
+                            )
+                        }
+                    }
+                    composable("settings") {
+                        Column {
+                            SettingsScreen()
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OptionsScreen1(viewModel = viewModel)
+                        }
+                    }
                 }
+
+                // Navigate to the screen based on currentScreen state
+                LaunchedEffect(currentScreen.value) {
+                    when (currentScreen.value) {
+                        "settings" -> navController.navigate("settings") {
+                            popUpTo("home") {inclusive = true}
+                        }
+                        "home" -> navController.navigate("home") {
+                            popUpTo("settings") { inclusive = true}
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+
+fun getCurrentMonth(): Int {
+    val calendar = Calendar.getInstance()
+    return calendar.get(Calendar.MONTH) + 1
+}
+
+
+fun getCurrentMonthName(month: Int): String {
+    return MonthsOfYear[month - 1] // Adjust for 1-based month
+}
 
 // list to hold the differnt days of the year and days of week
 val MonthsOfYear = listOf("JANUARY", "FEBUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER"," NOVEMBER", "DECEMBER")
@@ -86,11 +120,15 @@ val DaysOfWeek = listOf("Sunday", "Monday, Tuesday, Wednesday, Thursday, Friday,
 
 
 @Composable
-fun CurrentTimeScreen() {
+fun CurrentTimeScreen(viewModel: MainViewModel, navController: NavController) {
 
-    val currentDate = remember { mutableStateOf("")}
-    val currentTime = remember { mutableStateOf("")}
+    //Remembers states of date and time
+    val currentDate = remember { mutableStateOf("") }
+    val currentTime = remember { mutableStateOf("") }
 
+    val checkedOff = viewModel.checkedOff.collectAsState().value
+
+    //LaunchedEffect to keep updating the date and time for the app
     LaunchedEffect(Unit) {
         while (true) {
             // Get current date and time using Calendar
@@ -106,10 +144,10 @@ fun CurrentTimeScreen() {
             delay(1000)
         }
     }
-    // Layout to show the time
+    //Creates the base of the app with displaying the time and date while giving the appropriate amount of days in a given mounth
     Column(
         modifier = Modifier
-            .background(PurpleGrey40)
+            .background(if (checkedOff) Purple40 else Color.Gray)
             .border(6.dp, Color.DarkGray)
     ) {
         Text(
@@ -122,12 +160,11 @@ fun CurrentTimeScreen() {
 
         Row(
             modifier = Modifier
-                .background(Color.LightGray)
+                .background(if (checkedOff )Purple40 else Color.LightGray)
                 .padding(0.dp, 30.dp)
                 .fillMaxWidth()
                 .height(50.dp),
-
-            ) {
+        ) {
             Text(
                 text = currentDate.value,
                 modifier = Modifier
@@ -145,22 +182,23 @@ fun CurrentTimeScreen() {
                 textAlign = TextAlign.Center
             )
             Button(
-                //Make a navigation to the setting menu page
-                onClick = {},
+                onClick = {
+                    // Use ViewModel to navigate
+
+                    viewModel.navigateToSettings()
+                },
                 modifier = Modifier
                     .size(100.dp)
                     .padding(20.dp, 0.dp, 0.dp, 0.dp)
-
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = "button that lets users add events on specific days",
+                    contentDescription = "Open settings",
                     modifier = Modifier
                         .fillMaxSize()
                         .size(90.dp),
                     Color.Black
                 )
-
             }
         }
     }
@@ -175,8 +213,11 @@ fun CalandarNav(
     currentDay: String,
     currentDate: String,
     currentTime: String,
-    currentMonth: Int
+    currentMonth: Int,
+    viewModel: MainViewModel
 ) {
+
+    val checkedOff = viewModel.checkedOff.collectAsState().value
     val daysInMonth = LocalDate.now()
         .withMonth(currentMonth)
         .lengthOfMonth()
@@ -202,12 +243,12 @@ fun CalandarNav(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp) // Add spacing between items
+                    .padding(vertical = 8.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .height(200.dp)
-                        .background(Purple40)
+                        .background( if (checkedOff) Color.Blue else Purple40)
                         .fillMaxWidth()
                         .padding(20.dp, 15.dp)
                 ) {
