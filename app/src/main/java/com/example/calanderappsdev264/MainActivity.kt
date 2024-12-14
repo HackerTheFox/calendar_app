@@ -254,7 +254,11 @@ fun CalandarNav(
                 ) {
                     Button(
                         //Navigate to the page that allows the user to add events to specific date
-                        onClick = {},
+                        onClick = {
+                            //Use viewmodel to navigate again
+
+                            viewmodel.navigateToEvent()
+                        },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .size(100.dp),
