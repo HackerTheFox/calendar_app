@@ -28,4 +28,7 @@ class MainViewModel : ViewModel() {
     fun navigateToHome() {
         _currentScreen.value = "home"
     }
+
+    fun navigateToEvent() {
+        _currentScreen.value = "event"
 }
