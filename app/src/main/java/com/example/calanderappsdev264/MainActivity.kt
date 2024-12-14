@@ -257,7 +257,7 @@ fun CalandarNav(
                         onClick = {
                             //Use viewmodel to navigate again
 
-                            viewmodel.navigateToEvent()
+                            viewModel.navigateToEvent()
                         },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
